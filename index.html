@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>СК Эверест - Динамика движения к цели</title>
+<link rel="icon" type="image/jpeg" href="logo-everest-black.png" />
+<style>
+
+/* === ГЛАВНЫЕ КОНТЕЙНЕРЫ ДЛЯ МАСШТАБИРОВАНИЯ === */
+
+#ui-scale-wrapper {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+#ui-root {
+    width: 1400px;
+    height: 1600px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transform-origin: 50% 50% !important;
+}
+
+/* === BODY (убрали flex, чтобы не ломал сцену) === */
+
+body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(rgba(5, 7, 13, 0.9), rgba(5, 7, 13, 0.9)), url("logo-everest-city.jpg") center/cover no-repeat fixed;
+    color: #dce7f7;
+    margin: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Сетка */
+body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0, 180, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 180, 255, 0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridMove 18s linear infinite;
+    opacity: 0.25;
+    z-index: 1;
+}
+@keyframes gridMove {
+    0% { transform: translate(0,0); }
+    100% { transform: translate(-80px, -80px); }
+}
+
+/* Шум */
+body::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url('https://www.transparenttextures.com/patterns/asfalt-light.png');
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Заголовок */
+h1 {
+    position: absolute;
+    top: 0;
+    left: 50%;
+	width: 60%;
+    transform: translateX(-50%);
+    font-size: 54px;
+    font-weight: 700;
+    text-align: center;
+    color: rgba(0,255,210,0.9);
+    font-family: 'Orbitron', sans-serif;
+    text-shadow:
+        0 0 12px rgba(0,255,210,0.8),
+        0 0 25px rgba(0,255,210,0.6),
+        0 0 35px rgba(0,255,210,0.4);
+}
+
+/* Лого */
+.logo {
+    width: 250px;
+    border-radius: 12px;
+    position: absolute;
+    top: 300px;
+    left: 40.8%;
+    transform: translateX(-50%);
+    z-index: 10;
+    animation: logoPulse 2.5s ease-in-out infinite;
+    box-shadow:
+        0 0 18px rgba(0, 180, 255, 0.35),
+        0 0 32px rgba(0, 180, 255, 0.15);
+}
+@keyframes logoPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 28px rgba(0, 255, 210, 0.55),
+            0 0 48px rgba(0, 180, 255, 0.25);
+        transform: scale(0.7);
+    }
+    50% {
+        box-shadow:
+            0 0 18px rgba(0, 255, 210, 0),
+            0 0 32px rgba(0, 180, 255, 0);
+        transform: scale(0.9);
+    }
+}
+
+/* Панель */
+.timeline-label {
+    position: absolute;
+    top: 560px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-size: 16px;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 2px;
+    color: rgba(0,255,210,0.85);
+    text-shadow:
+        0 0 8px rgba(0,255,210,0.8),
+        0 0 16px rgba(0,255,210,0.6),
+        0 0 28px rgba(0,255,210,0.4);
+}
+
+.panel {
+    position: absolute;
+    left: 50%;
+    bottom: 780px;
+    transform: translateX(-50%);
+    width: 820px;
+    padding: 28px 36px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(0, 180, 255, 0.25);
+    box-shadow:
+        0 0 25px rgba(0, 180, 255, 0.25),
+        inset 0 0 25px rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 10;
+}
+.panel::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 22px;
+    background: linear-gradient(90deg, #00b4ff, #00ffd5, #0077ff);
+    filter: blur(12px);
+    opacity: 0.25;
+    z-index: -1;
+}
+
+/* Даты */
+.dates-row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    z-index: 22; /* ← поверх панели */
+    position: relative;
+}
+
+/* Линейный прогресс-бар */
+.progress-bar {
+    position: relative;
+    width: 100%;
+    height: 26px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 180, 255, 0.4);
+    box-shadow:
+        inset 0 0 15px rgba(0, 180, 255, 0.2),
+        0 0 15px rgba(0, 180, 255, 0.2);
+}
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg,
+        #00eaff 0%,
+        #00ffd5 35%,
+        #00fff2 55%,
+        #00c8ff 75%,
+        #ccff00 100%
+    );
+    border-radius: 50px;
+    box-shadow:
+        0 0 12px #00eaff,
+        0 0 22px #00ffd5,
+        0 0 35px rgba(0, 255, 210, 0.8),
+        inset 0 0 12px rgba(0, 255, 210, 0.6),
+        inset 0 0 25px rgba(0, 255, 210, 0.4),
+        0 0 25px rgba(204, 255, 0, 0.8);
+    transition: width 0.6s ease;
+    position: relative;
+    z-index: 3;
+}
+
+/* Риски (tick) и подписи (year-label) на линейном прогресс-баре */
+
+.milestones-mask {
+    width: 100%;
+    overflow: hidden; /* ← скрывает левую часть */
+    position: relative;
+	
+	/* расширяем область видимости без сдвига содержимого */ 
+	margin-left: -40px; 
+	margin-right: -40px; 
+	padding-left: 40px; 
+	padding-right: 40px; 
+	box-sizing: content-box;
+}
+
+.milestones {
+    position: relative;
+    height: 80px;
+}
+.tick {
+    position: absolute;
+    width: 2px;
+    transform: translateX(-50%);
+    background: #00ffd5;
+}
+
+.tick.major { height: 28px; top: 0; }
+.tick.quarter { height: 20px; top: 8px; background: #00ffa0; }
+.tick.minor { height: 14px; top: 12px; opacity: 0.6; }
+
+.year-label {
+    position: absolute;
+    top: 40px;
+    transform: translateX(-50%);
+    color: #00ffd5;
+    font-size: 18px;
+}
+
+
+/* Энергия по линейному бару */
+.energy {
+    position: absolute;
+    inset: 0;
+	z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+        90deg,
+        rgba(0, 255, 210, 0) 0%,
+        rgba(0, 255, 210, 0.25) 40%,
+        rgba(0, 255, 210, 0.55) 50%,
+        rgba(0, 255, 210, 0.25) 60%,
+        rgba(0, 255, 210, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: energyFlow 5s linear infinite;
+    mix-blend-mode: screen;
+    opacity: 0.5;
+}
+@keyframes energyFlow {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Инфо-текст */
+.info {
+    position: absolute;
+	left: 0; 
+	right: 0; 
+	margin: 0 auto;
+    font-size: 20px;
+    text-align: center;
+    color: #c7e6ff;
+    text-shadow: 0 0 8px rgba(0, 180, 255, 0.3);
+    z-index: 10;
+}
+
+#remaining {
+	bottom: 720px;
+    font-size: 32px;
+    font-weight: 800;
+    color: #ff9a2b;
+    text-shadow:
+        0 0 20px #ff4d4d,
+        0 0 12px rgba(255, 60, 60, 0.6),
+        0 0 25px rgba(255, 0, 0, 0.45);
+}
+#passed    {
+	bottom: 660px; 
+	font-size: 28px; 
+	font-weight: 800; 
+	color: #00ffe0; 
+	text-shadow: 
+		0 0 2px #00ffe0, 
+		0 0 5px #00ffe0, 
+		0 0 15px rgba(0,255,210,0.9);
+	}
+#now       { bottom: 600px; }
+#local     { bottom: 540px; }
+
+#final {
+    position: absolute;
+    left: 50%;
+    bottom: 360px;
+    transform: translateX(-50%);
+    min-height: 80px;
+	width: 60%;
+    opacity: 1;
+    pointer-events: none;
+    font-size: 54px;
+    color: #00ffd5;
+    text-shadow: 0 0 12px #00ffd5;
+    white-space: pre-line;
+	text-align: center;
+}
+
+/* Радиальное кольцо */
+.radial-progress {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1100px;
+    height: 1100px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+}
+.radial-progress::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 80%;
+    border: 1px solid rgba(0,255,210,0.01);
+    box-shadow:
+        0 0 25px rgba(0,255,210,0.1),
+        inset 0 0 25px rgba(0,255,210,0.01);
+}
+
+/* Энергетический импульс */
+.radial-energy {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    background: conic-gradient(
+        rgba(0,255,210,0) 0deg,
+        rgba(0,255,210,0.25) 10deg,
+        rgba(0,255,210,0.55) 50deg,
+        rgba(0,255,210,0.25) 90deg,
+        rgba(0,255,210,0) 100deg
+    );
+    mask: url(#ring-mask);
+    -webkit-mask: url(#ring-mask);
+    animation: radialEnergyFlow 2.5s linear infinite;
+    mix-blend-mode: screen;
+    opacity: 0.5;
+}
+@keyframes radialEnergyFlow {
+    0%   { transform: rotate(-180deg); }
+    100% { transform: rotate(180deg); }
+}
+
+/*Кнопка*/
+.steps-button {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+
+    z-index: 999999;
+    pointer-events: auto;
+
+    font-size: calc(30px * var(--ui-scale));
+    line-height: 1;
+
+    color: rgba(0, 255, 210, 0.85);
+
+    text-decoration: none;
+
+    padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
+
+    border-radius: calc(10px * var(--ui-scale));
+
+    background: rgba(0, 255, 210, 0.04);
+    border: 1px solid rgba(0, 255, 210, 0.18);
+
+    backdrop-filter: blur(6px);
+
+    box-shadow:
+        0 0 10px rgba(0, 255, 210, 0.15);
+
+    opacity: 0.35;
+
+    transition: all 0.25s ease;
+}
+
+.steps-button:hover {
+    opacity: 0.95;
+
+    transform: translateY(-2px);
+
+    color: rgba(0, 255, 210, 1);
+
+    border-color: rgba(0, 255, 210, 0.5);
+
+    box-shadow:
+        0 0 14px rgba(0, 255, 210, 0.35),
+        0 0 28px rgba(0, 180, 255, 0.2);
+}
+
+</style>
+</head>
+<body>
+<div id="ui-scale-wrapper">
+<div id="ui-root">
+<h1>Динамика движения к цели: ГЕНПОДРЯД через 3 года</h1>
+<!-- Canvas -->
+<canvas id="arcCanvas" width="1300" height="1300" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none; z-index:2;">
+</canvas>
+<!-- SVG-маска -->
+<svg width="0" height="0">
+<defs>
+<mask id="ring-mask">
+<circle cx="550" cy="550" r="545" fill="white"/>
+<circle cx="550" cy="550" r="520" fill="black"/>
+<rect x="0" y="550" width="1100" height="550" fill="black"/>
+</mask>
+</defs>
+</svg>
+<!-- Радиальное кольцо -->
+<div class="radial-progress">
+<div class="radial-energy"></div>
+</div>
+<img src="logo-everest-blue.png" alt="СК Эверест" class="logo" />
+
+<div class="timeline-label">ШКАЛА ВРЕМЕНИ</div>
+<div class="panel">
+<div class="dates-row">
+<div id="date-start"></div>
+<div id="date-end"></div>
+</div>
+<div class="progress-bar">
+<div id="fill" class="progress-fill"></div>
+<div class="energy"></div>
+</div>
+<div class="milestones-mask">
+<div class="milestones" id="milestones"></div>
+</div>
+</div>
+<div class="info" id="remaining"></div>
+<div class="info" id="passed"></div>
+<div class="info" id="now"></div>
+<div class="info" id="local"></div>
+<div id="final" class="final-message"></div>
+</div>
+
+</div>
+
+<button
+    class="steps-button"
+    title="Шаги"
+    onclick="openSheet()"
+>
+⚙
+</button>
+
+<script>
+/* === ТВОЙ JS БЕЗ ИЗМЕНЕНИЙ (кроме добавления масштабирования в конце) === */
+
+/* === ДАТЫ === */
+
+const DATES = {
+    start: { year: 2026, month: 0, day: 1, hour: 00, minute: 00, second: 00 },
+    end:   { year: 2029, month: 0, day: 1, hour: 00, minute: 00, second: 00 }       
+};
+
+const startDate = new Date(Date.UTC(
+    DATES.start.year,
+    DATES.start.month,
+    DATES.start.day,
+    0, 0, 0
+));
+
+const endDate = new Date(Date.UTC(
+    DATES.end.year,
+    DATES.end.month,
+    DATES.end.day,
+    DATES.end.hour,
+    DATES.end.minute,
+    DATES.end.second
+));
+
+/* === CANVAS === */
+
+const canvas = document.getElementById("arcCanvas");
+const ctx = canvas.getContext("2d");
+const size = 1300;
+const cx = size / 2;
+const cy = size / 2;
+
+const outerR = 545;
+const innerR = 520;
+const lineWidth = outerR - innerR;
+
+/* === УГЛЫ ДУГИ === */
+
+const fullStart = Math.PI * 0.65;
+const fullEnd = Math.PI * 2.35;
+
+/* === РИСОВАНИЕ ДУГИ === */
+
+function drawArc(progress = 1) {
+    ctx.clearRect(0, 0, size, size);
+
+    const endAngle = fullStart + (fullEnd - fullStart) * progress;
+
+    const grad = ctx.createLinearGradient(0, 0, size, 0);
+    grad.addColorStop(0.00, "#00eaff");
+    grad.addColorStop(0.35, "#00ffd5");
+    grad.addColorStop(0.55, "#00fff2");
+    grad.addColorStop(0.75, "#00c8ff");
+    grad.addColorStop(1.00, "#ccff00");
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, (outerR + innerR) / 2, fullStart, endAngle);
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = grad;
+    ctx.shadowBlur = 35;
+    ctx.shadowColor = "rgba(0,255,210,0.8)";
+    ctx.stroke();
+
+    /* === Риски === */
+
+    ctx.font = "32px 'Orbitron', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(0,255,210,0.85)";
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = "rgba(0,255,210,0.6)";
+
+    for (let p = 10; p < 100; p += 10) {
+        const t = p / 100;
+        const a = fullStart + (fullEnd - fullStart) * t;
+
+        const ix = cx + Math.cos(a) * (outerR - 10);
+        const iy = cy + Math.sin(a) * (outerR - 10);
+        const ox = cx + Math.cos(a) * (outerR + 10);
+        const oy = cy + Math.sin(a) * (outerR + 10);
+
+        ctx.beginPath();
+        ctx.moveTo(ix, iy);
+        ctx.lineTo(ox, oy);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(0,255,210,0.8)";
+        ctx.stroke();
+
+        const labelX = cx + Math.cos(a) * (outerR + 55);
+        const labelY = cy + Math.sin(a) * (outerR + 55);
+        ctx.fillText(p + "%", labelX, labelY);
+    }
+
+/* === Стрелка === */
+
+const angle = fullStart + (fullEnd - fullStart) * progress;
+const pulse = 1 + Math.sin(Date.now() / 1000 * Math.PI * 2) * 0.15;
+
+const px = cx + Math.cos(angle) * (outerR + 10);
+const py = cy + Math.sin(angle) * (outerR + 10);
+
+const sizeOuter = 28 * pulse;
+const sizeInner = 25 * pulse;
+
+function drawTriangle(size, fill, stroke, shadow) {
+    const tipX = px;
+    const tipY = py;
+
+    const leftX = px + Math.cos(angle + Math.PI * 0.75) * size;
+    const leftY = py + Math.sin(angle + Math.PI * 0.75) * size;
+
+    const rightX = px + Math.cos(angle - Math.PI * 0.75) * size;
+    const rightY = py + Math.sin(angle - Math.PI * 0.75) * size;
+
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(leftX, leftY);
+    ctx.lineTo(rightX, rightY);
+    ctx.closePath();
+
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = shadow;
+    ctx.shadowColor = stroke;
+
+    ctx.fill();
+    ctx.stroke();
+}
+
+drawTriangle(sizeOuter, "rgba(255,40,40,0.9)", "rgba(255,0,0,1)", 35);
+drawTriangle(sizeInner, "rgba(255,255,255,0.9)", "rgba(255,0,0,1)", 20);
+
+/* === ТЕКСТ 0% и 100% === */
+
+ctx.font = "48px 'Orbitron', sans-serif";
+ctx.textAlign = "center";
+ctx.textBaseline = "middle";
+ctx.fillStyle = "rgba(0,255,210,0.9)";
+ctx.shadowBlur = 25;
+ctx.shadowColor = "rgba(0,255,210,0.8)";
+
+const startX = cx + Math.cos(fullStart) * (outerR + 20);
+const startY = cy + Math.sin(fullStart) * (outerR + 20);
+
+const endX = cx + Math.cos(fullEnd) * (outerR + 20);
+const endY = cy + Math.sin(fullEnd) * (outerR + 20);
+
+ctx.fillText("0%", startX, startY + 48);
+ctx.fillText("100%", endX, endY + 48);
+}
+
+/* === ПЕРВОНАЧАЛЬНЫЙ РЕНДЕР === */
+
+(function initialDraw() {
+    const now = new Date();
+    const nowUTC = new Date(now.toISOString());
+    const total = endDate - startDate;
+    const passed = Math.min(nowUTC - startDate, endDate - startDate);
+    const progress = Math.min(Math.max(passed / total, 0), 1);
+    //drawArc(progress);
+})();
+
+/* === ДАТЫ === */
+
+function formatDate(d) {
+    return d.toISOString().slice(0,10).split("-").reverse().join(".");
+}
+
+document.getElementById("date-start").textContent = formatDate(startDate);
+document.getElementById("date-end").textContent   = formatDate(endDate);
+
+/* === ГОДЫ === */
+
+function buildMilestones() {
+    const container = document.getElementById("milestones");
+    container.innerHTML = "";
+    container.style.position = "relative";
+
+    const start = startDate.getTime();
+    const end   = endDate.getTime();
+    const total = end - start;
+
+    const diffHours  = total / (1000 * 60 * 60);
+    const diffDays   = total / (1000 * 60 * 60 * 24);
+    const diffMonths = monthDiff(startDate, endDate);
+    const diffYears  = yearDiff(startDate, endDate);
+
+    if (diffHours < 1) return;
+
+    if (diffDays < 1) {
+        let cur = new Date(Date.UTC(
+            startDate.getUTCFullYear(),
+            startDate.getUTCMonth(),
+            startDate.getUTCDate(),
+            startDate.getUTCHours()
+        ));
+
+        while (cur <= endDate) {
+            const pos = (cur.getTime() - start) / total * 100;
+
+            addTick(container, pos, "major");
+            addLabel(container, pos, cur.getUTCHours() + ":00");
+
+            cur.setUTCHours(cur.getUTCHours() + 1);
+        }
+
+        addTick(container, 100, "major");
+        return;
+    }
+
+    if (diffMonths < 1) {
+        let cur = new Date(Date.UTC(
+            startDate.getUTCFullYear(),
+            startDate.getUTCMonth(),
+            startDate.getUTCDate()
+        ));
+
+        while (cur <= endDate) {
+            const pos = (cur.getTime() - start) / total * 100;
+
+            addTick(container, pos, "major");
+            addLabel(container, pos, cur.getUTCDate());
+
+            cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+
+        addTick(container, 100, "major");
+        return;
+    }
+
+    if (diffYears < 1) {
+        let cur = new Date(Date.UTC(
+            startDate.getUTCFullYear(),
+            startDate.getUTCMonth(),
+            1
+        ));
+
+        while (cur <= endDate) {
+            const pos = (cur.getTime() - start) / total * 100;
+
+            addTick(container, pos, "major");
+            addLabel(container, pos, cur.toLocaleString("default", { month: "short" }));
+
+            cur.setUTCMonth(cur.getUTCMonth() + 1);
+        }
+
+        addTick(container, 100, "major");
+        return;
+    }
+
+    let cur = new Date(Date.UTC(startDate.getUTCFullYear(), 0, 1));
+
+    while (cur <= endDate) {
+        const pos = (cur.getTime() - start) / total * 100;
+
+        addTick(container, pos, "major");
+        addLabel(container, pos, cur.getUTCFullYear());
+
+        for (let m = 1; m <= 12; m++) {
+            const monthStart = new Date(Date.UTC(cur.getUTCFullYear(), m, 1));
+            if (monthStart > endDate) break;
+
+            const mp = (monthStart.getTime() - start) / total * 100;
+
+            addTick(container, mp, (m % 3 === 0) ? "quarter" : "minor");
+        }
+
+        cur.setUTCFullYear(cur.getUTCFullYear() + 1);
+    }
+
+    addTick(container, 100, "major");
+}
+
+function addTick(container, pos, type) {
+    const t = document.createElement("div");
+    t.className = "tick " + type;
+    t.style.left = pos + "%";
+    container.appendChild(t);
+}
+
+function addLabel(container, pos, text) {
+    const l = document.createElement("div");
+    l.className = "year-label";
+    l.textContent = text;
+    l.style.left = pos + "%";
+    container.appendChild(l);
+}
+
+function monthDiff(a, b) {
+    return (
+        (b.getUTCFullYear() - a.getUTCFullYear()) * 12 +
+        (b.getUTCMonth() - a.getUTCMonth()) +
+        (b.getUTCDate() - a.getUTCDate()) / daysInMonth(a.getUTCFullYear(), a.getUTCMonth())
+    );
+}
+
+function yearDiff(a, b) {
+    return monthDiff(a, b) / 12;
+}
+
+function daysInMonth(year, month) {
+    return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+
+function adjustTransform(element, pos) {
+    if (pos <= 0) {
+        element.style.transform = "translateX(0)";
+    } else if (pos >= 100) {
+        element.style.transform = "translateX(-100%)";
+    } else {
+        element.style.transform = "translateX(-50%)";
+    }
+}
+
+buildMilestones();
+
+/* === РАСЧЁТ РАЗНИЦЫ ДАТ === */
+
+function diffDateParts(start, end) {
+    let s = new Date(start);
+    let e = new Date(end);
+
+    let years = e.getUTCFullYear() - s.getUTCFullYear();
+    let months = e.getUTCMonth() - s.getUTCMonth();
+    let days = e.getUTCDate() - s.getUTCDate();
+    let hours = e.getUTCHours() - s.getUTCHours();
+    let minutes = e.getUTCMinutes() - s.getUTCMinutes();
+    let seconds = e.getUTCSeconds() - s.getUTCSeconds();
+
+    if (seconds < 0) { seconds += 60; minutes--; }
+    if (minutes < 0) { minutes += 60; hours--; }
+    if (hours < 0) { hours += 24; days--; }
+    if (days < 0) {
+        let prevMonthDays = new Date(e.getUTCFullYear(), e.getUTCMonth(), 0).getUTCDate();
+        days += prevMonthDays;
+        months--;
+    }
+    if (months < 0) {
+        months += 12;
+        years--;
+    }
+
+    return { years, months, days, hours, minutes, seconds };
+}
+
+function formatTime(start, end) {
+    const diff = diffDateParts(start, end);
+
+    return (
+        String(diff.years).padStart(2,'0') + ":" +
+        String(diff.months).padStart(2,'0') + ":" +
+        String(diff.days).padStart(2,'0') + ":" +
+        String(diff.hours).padStart(2,'0') + ":" +
+        String(diff.minutes).padStart(2,'0') + ":" +
+        String(diff.seconds).padStart(2,'0')
+    );
+}
+
+/* === ОБНОВЛЕНИЕ ТЕКСТА === */
+
+function update() {
+    const nowUTC = new Date(new Date().toISOString());
+
+    let passedText;
+    let remainingText;
+
+    if (nowUTC >= endDate) {
+        passedText = formatTime(startDate, endDate);
+        remainingText = "00:00:00:00:00:00";
+    } else if (nowUTC <= startDate) {
+        passedText = "00:00:00:00:00:00";
+        remainingText = formatTime(startDate, endDate);
+    } else {
+        passedText = formatTime(startDate, nowUTC);
+        remainingText = formatTime(nowUTC, endDate);
+    }
+
+    document.getElementById("passed").textContent =
+        "Прошло (Мировое время UDT): " + passedText;
+
+    document.getElementById("remaining").textContent =
+        "Осталось (Мировое время UDT): " + remainingText;
+
+    const total = endDate - startDate;
+    const passed = Math.min(nowUTC - startDate, endDate - startDate);
+    const progress = Math.min(Math.max(passed / total, 0), 1);
+    //const percent = Math.round(progress * 100);
+
+    document.getElementById("fill").style.width = (progress * 100) + "%";
+
+    document.getElementById("now").textContent =
+        "Текущее время (Мировое время UDT): " +
+        nowUTC.toISOString().slice(0, 19).replace("T", " ");
+
+    document.getElementById("local").textContent =
+        "Текущее время (локальное): " + new Date().toLocaleString();
+
+    //document.getElementById("final").textContent =
+    //    "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + percent + "%";
+}
+
+update();
+setInterval(update, 1000);
+
+/* === АНИМАЦИЯ CANVAS === */
+
+function animate() {
+    const now = new Date();
+    const nowUTC = new Date(now.toISOString());
+    const total = endDate - startDate;
+    const passed = Math.min(nowUTC - startDate, endDate - startDate);
+    const progress = Math.min(Math.max(passed / total, 0), 1);
+
+    //drawArc(progress);
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+
+/* === МАСШТАБИРОВАНИЕ СЦЕНЫ === */
+
+function applyUIScale() {
+    const zoom = window.devicePixelRatio || 1;
+
+    // Масштаб по размеру окна
+    const baseScale = Math.min(
+        window.innerWidth / 1400,
+        window.innerHeight / 1600
+    );
+
+    // Итоговый масштаб: учитываем и окно, и zoom
+	const scale = baseScale;
+
+    const root = document.getElementById("ui-root");
+    if (!root) return;
+
+    root.style.transform = `translate(-50%, -50%) scale(${scale})`;
+	
+	// передаём масштаб наружу
+    document.documentElement.style.setProperty("--ui-scale", baseScale);
+}
+
+window.addEventListener("resize", applyUIScale);
+window.addEventListener("DOMContentLoaded", applyUIScale);
+
+
+</script>
+
+<script>
+let lastVersion = null;
+let inFlight = false;
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbx_k_sE0dWoS0oxRbE3YcfGV9rw4c84ifChX_D9yMlGXUHZvb1LUYSA2--Hc4G1-hQtPA/exec";
+
+const FINGERPRINT = btoa(
+  navigator.userAgent + screen.width + screen.height
+);
+
+// -----------------------------
+// SINGLE FETCH GUARD
+// -----------------------------
+async function loadStepsProgress() {
+  if (inFlight) return;
+  if (document.hidden) return; // no background spam
+
+  inFlight = true;
+
+  try {
+    const url = lastVersion
+      ? `${API_URL}?fp=${FINGERPRINT}&v=${lastVersion}`
+      : `${API_URL}?fp=${FINGERPRINT}`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.status === "rate_limited") return;
+    if (data.status === "not_modified") return;
+
+    lastVersion = data.version;
+
+    drawArc(data.progress);
+
+    document.getElementById("final").textContent =
+      "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + data.percent + "%";
+
+  } catch (e) {
+    console.log("error", e);
+  } finally {
+    inFlight = false;
+  }
+  
+}
+
+// -----------------------------
+// SMART LOOP (no overlap)
+// -----------------------------
+function loop() {
+  loadStepsProgress().finally(() => {
+    setTimeout(loop, 15000);
+  });
+}
+
+// -----------------------------
+loop();
+
+// ------------------------------------
+// OPEN PRIVATE SHEET
+// ------------------------------------
+
+async function openSheet() {
+    const pin = prompt("Введите PIN");
+    if (!pin) return;
+    try {
+        const res = await fetch(
+            `${API_URL}?action=getSheet&pin=${encodeURIComponent(pin)}`
+        );
+        const data = await res.json();
+        if (data.status !== "ok") {
+            alert("Неверный PIN");
+            return;
+        }
+        window.open(data.url, "_blank");
+    } catch(e) {
+        console.log(e);
+        alert("Ошибка подключения");
+    }
+}
+
+</script>
+
+
+</body>
+</html>
