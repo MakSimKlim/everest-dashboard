@@ -496,6 +496,22 @@ h1 {
 	white-space: pre-line;
 }
 
+/*KPI status*/
+#kpi-status {
+    position: absolute;
+    left: 50%;
+    bottom: 300px;
+    transform: translateX(-50%);
+
+    font-size: calc(26px * var(--ui-scale));
+    font-weight: 800;
+
+    color: #00ffd5;
+    text-shadow: 0 0 12px rgba(0,255,210,0.6);
+
+    font-family: 'Orbitron', sans-serif;
+}
+
 </style>
 </head>
 <body>
@@ -540,6 +556,7 @@ h1 {
 <div class="info" id="now"></div>
 <div class="info" id="local"></div>
 <div id="final" class="final-message"></div>
+<div id="kpi-status"></div>
 </div>
 
 <button
@@ -1056,11 +1073,15 @@ async function loadStepsProgress() {
     drawArc(data.progress);
 
     lastPercent = Number(data.percent);
+	lastStatus = data.status;//вывод статуса KPI по формуле эффективности
 
     document.getElementById("loading-overlay").style.display = "none";
 
     document.getElementById("final").textContent =
       "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + lastPercent + "%";
+	  
+	document.getElementById("kpi-status").textContent =
+    "СТАТУС KPI: " + lastStatus;
 
     // -----------------------------
     // CONDITIONS
