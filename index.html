@@ -412,6 +412,7 @@ h1 {
         0 0 14px rgba(0, 255, 210, 0.35),
         0 0 28px rgba(0, 180, 255, 0.2);
 }
+
 /* LOADING PROGRESS */
 /* LOADING OVERLAY */
 
@@ -451,6 +452,48 @@ h1 {
     font-size: 16px;
     letter-spacing: 2px;
     opacity: 0.8;
+}
+
+/*success overlay*/
+.modal-box {
+    text-align: center;
+    padding: calc(30px * var(--ui-scale)) calc(40px * var(--ui-scale));
+    border-radius: calc(20px * var(--ui-scale));
+    font-family: 'Orbitron', sans-serif;
+    max-width: 80%;
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+}
+
+/* WIN */
+.modal-win {
+    color: #00ffd5;
+    background: rgba(0,255,210,0.08);
+    border: 1px solid rgba(0,255,210,0.4);
+    box-shadow: 0 0 calc(40px * var(--ui-scale)) rgba(0,255,210,0.25);
+}
+
+/* FAIL */
+.modal-fail {
+    color: #ff4d4d;
+    background: rgba(255,0,0,0.08);
+    border: 1px solid rgba(255,80,80,0.4);
+    box-shadow: 0 0 calc(40px * var(--ui-scale)) rgba(255,0,0,0.25);
+}
+
+/* TITLE */
+.modal-title {
+    font-size: calc(28px * var(--ui-scale));
+    font-weight: 800;
+    margin-bottom: calc(10px * var(--ui-scale));
+	white-space: pre-line;
+}
+
+/* MESSAGE */
+.modal-message {
+    font-size: calc(36px * var(--ui-scale));
+    font-weight: 900;
+	white-space: pre-line;
 }
 
 </style>
@@ -499,8 +542,6 @@ h1 {
 <div id="final" class="final-message"></div>
 </div>
 
-</div>
-
 <button
     class="steps-button"
     title="Шаги"
@@ -516,14 +557,21 @@ h1 {
     </div>
 </div>
 
+<div id="success-overlay" class="loading-overlay" style="display:none;">
+    <div id="success-box" class="modal-box">
+        <div class="modal-title"></div>
+        <div class="modal-message"></div>
+    </div>
+</div>
+
 <script>
 /* === ТВОЙ JS БЕЗ ИЗМЕНЕНИЙ (кроме добавления масштабирования в конце) === */
-
+/*formatTime loadStepsProgress*/
 /* === ДАТЫ === */
 
 const DATES = {
     start: { year: 2026, month: 0, day: 1, hour: 00, minute: 00, second: 00 },
-    end:   { year: 2029, month: 0, day: 1, hour: 00, minute: 00, second: 00 }       
+    end:   { year: 2029, month: 0, day: 1, hour: 00, minute: 00, second: 00 }      
 };
 
 const startDate = new Date(Date.UTC(
@@ -972,6 +1020,10 @@ window.addEventListener("DOMContentLoaded", applyUIScale);
 let lastVersion = null;
 let inFlight = false;
 
+let lastPercent = 0;
+let successShown = false;
+let loopStopped = false;
+
 const API_URL =
 "https://script.google.com/macros/s/AKfycbx_k_sE0dWoS0oxRbE3YcfGV9rw4c84ifChX_D9yMlGXUHZvb1LUYSA2--Hc4G1-hQtPA/exec";
 
@@ -980,11 +1032,11 @@ const FINGERPRINT = btoa(
 );
 
 // -----------------------------
-// SINGLE FETCH GUARD
+// FETCH KPI
 // -----------------------------
 async function loadStepsProgress() {
-  if (inFlight) return;
-  if (document.hidden) return; // no background spam
+  if (inFlight || loopStopped) return;
+  if (document.hidden) return;
 
   inFlight = true;
 
@@ -1003,58 +1055,106 @@ async function loadStepsProgress() {
 
     drawArc(data.progress);
 
-	// убрать кольцо прогресса загрузки при первом успешном ответе
-	const overlay = document.getElementById("loading-overlay");
-	if (overlay) overlay.style.display = "none";
+    lastPercent = Number(data.percent);
+
+    document.getElementById("loading-overlay").style.display = "none";
 
     document.getElementById("final").textContent =
-      "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + data.percent + "%";
+      "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + lastPercent + "%";
+
+    // -----------------------------
+    // CONDITIONS
+    // -----------------------------
+    const nowUTC = new Date();
+
+    const timeExpired = nowUTC >= endDate;
+    const goalReached = lastPercent >= 100;
+
+    // логика:
+    // WIN → KPI = 100%
+    // FAIL → время вышло и KPI < 100%
+
+    const isWin = goalReached;
+    const isFail = timeExpired && !goalReached;
+
+    if (!successShown && (isWin || isFail)) {
+      successShown = true;
+      loopStopped = true;
+
+      showFinalPopup(isWin);
+    }
 
   } catch (e) {
     console.log("error", e);
   } finally {
     inFlight = false;
   }
-  
 }
 
 // -----------------------------
-// SMART LOOP (no overlap)
+// POPUP
+// -----------------------------
+function showFinalPopup(isWin) {
+    const overlay = document.getElementById("success-overlay");
+    const box = document.getElementById("success-box");
+
+    if (!overlay || !box) return;
+
+    overlay.style.display = "flex";
+
+    const title = box.querySelector(".modal-title");
+    const message = box.querySelector(".modal-message");
+
+    if (isWin) {
+        box.className = "modal-box modal-win";
+        title.textContent = "ЦЕЛЬ ДОСТИГНУТА!!!\nПОЗДРАВЛЯЕМ!!!";
+        message.textContent = "Вы — ГЕНПОДРЯДЧИК!!!";
+    } else {
+        box.className = "modal-box modal-fail";
+        title.textContent = "ЦЕЛЬ НЕ ДОСТИГНУТА!!!";
+        message.textContent = "Скорректируйте сроки и шаги,\nа затем попробуйте ещё раз";
+    }
+}
+
+// -----------------------------
+// LOOP
 // -----------------------------
 function loop() {
+  if (loopStopped) return;
+
   loadStepsProgress().finally(() => {
     setTimeout(loop, 15000);
   });
 }
 
-// -----------------------------
 loop();
 
-// ------------------------------------
-// OPEN PRIVATE SHEET
-// ------------------------------------
-
+// -----------------------------
+// OPEN SHEET
+// -----------------------------
 async function openSheet() {
     const pin = prompt("Введите PIN");
     if (!pin) return;
+
     try {
         const res = await fetch(
             `${API_URL}?action=getSheet&pin=${encodeURIComponent(pin)}`
         );
         const data = await res.json();
+
         if (data.status !== "ok") {
             alert("Неверный PIN");
             return;
         }
+
         window.open(data.url, "_blank");
+
     } catch(e) {
         console.log(e);
         alert("Ошибка подключения");
     }
 }
-
 </script>
-
 
 </body>
 </html>
