@@ -412,6 +412,46 @@ h1 {
         0 0 14px rgba(0, 255, 210, 0.35),
         0 0 28px rgba(0, 180, 255, 0.2);
 }
+/* LOADING PROGRESS */
+/* LOADING OVERLAY */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 7, 13, 0.65);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-box {
+    text-align: center;
+    color: #dce7f7;
+}
+
+/* spinner */
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top: 3px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: 16px;
+    letter-spacing: 2px;
+    opacity: 0.8;
+}
 
 </style>
 </head>
@@ -468,6 +508,13 @@ h1 {
 >
 ⚙
 </button>
+
+<div id="loading-overlay" class="loading-overlay">
+    <div class="loading-box">
+        <div class="spinner"></div>
+        <div class="loading-text">ЗАГРУЗКА ДАННЫХ...</div>
+    </div>
+</div>
 
 <script>
 /* === ТВОЙ JS БЕЗ ИЗМЕНЕНИЙ (кроме добавления масштабирования в конце) === */
@@ -955,6 +1002,10 @@ async function loadStepsProgress() {
     lastVersion = data.version;
 
     drawArc(data.progress);
+
+	// убрать кольцо прогресса загрузки при первом успешном ответе
+	const overlay = document.getElementById("loading-overlay");
+	if (overlay) overlay.style.display = "none";
 
     document.getElementById("final").textContent =
       "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + data.percent + "%";
