@@ -500,16 +500,20 @@ h1 {
 #kpi-status {
     position: absolute;
     left: 50%;
-    bottom: 300px;
+    bottom: 100px;
     transform: translateX(-50%);
 
-    font-size: calc(26px * var(--ui-scale));
+    font-size: calc(58px * var(--ui-scale));
     font-weight: 800;
+
+    line-height: 1.1;
 
     color: #00ffd5;
     text-shadow: 0 0 12px rgba(0,255,210,0.6);
 
     font-family: 'Orbitron', sans-serif;
+    text-align: center;
+    white-space: pre-line;
 }
 
 </style>
@@ -1073,7 +1077,7 @@ async function loadStepsProgress() {
     drawArc(data.progress);
 
     lastPercent = Number(data.percent);
-	lastStatus = data.status;//вывод статуса KPI по формуле эффективности
+	let lastStatus = data.kpiStatus;//вывод статуса KPI по формуле эффективности
 
     document.getElementById("loading-overlay").style.display = "none";
 
@@ -1081,7 +1085,7 @@ async function loadStepsProgress() {
       "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + lastPercent + "%";
 	  
 	document.getElementById("kpi-status").textContent =
-    "СТАТУС KPI: " + lastStatus;
+    "СТАТУС прогресса: " + lastStatus;
 
     // -----------------------------
     // CONDITIONS
