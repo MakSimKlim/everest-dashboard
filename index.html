@@ -562,6 +562,7 @@ h1 {
 <img src="logo-everest-blue.png" alt="СК Эверест" class="logo" />
 
 <div class="timeline-label">ШКАЛА ВРЕМЕНИ</div>
+
 <div class="panel">
 <div class="dates-row">
 <div id="date-start"></div>
@@ -606,6 +607,7 @@ h1 {
 </div>
 
 <script>
+/*progress*/
 /* === ДАТЫ === */
 
 const DATES = {
@@ -969,6 +971,14 @@ function formatTime(start, end) {
 function update() {
     const nowUTC = new Date(new Date().toISOString());
 
+    const total = endDate - startDate;
+    const passed = Math.min(nowUTC - startDate, endDate - startDate);
+    const progress = Math.min(Math.max(passed / total, 0), 1);
+
+    // проценты (ВАЖНО: ДО использования ниже)
+    const passedPercent = progress * 100;
+    const remainingPercent = 100 - passedPercent;
+
     let passedText;
     let remainingText;
 
@@ -984,15 +994,14 @@ function update() {
     }
 
     document.getElementById("passed").textContent =
-        "Прошло (Мировое время UDT): " + passedText;
+        "Прошло (Мировое время UDT): " +
+        passedText +
+        " (" + passedPercent.toFixed(2) + "%)";
 
     document.getElementById("remaining").textContent =
-        "Осталось (Мировое время UDT): " + remainingText;
-
-    const total = endDate - startDate;
-    const passed = Math.min(nowUTC - startDate, endDate - startDate);
-    const progress = Math.min(Math.max(passed / total, 0), 1);
-    //const percent = Math.round(progress * 100);
+        "Осталось (Мировое время UDT): " +
+        remainingText +
+        " (" + remainingPercent.toFixed(2) + "%)";
 
     document.getElementById("fill").style.width = (progress * 100) + "%";
 
@@ -1002,9 +1011,6 @@ function update() {
 
     document.getElementById("local").textContent =
         "Текущее время (локальное): " + new Date().toLocaleString();
-
-    //document.getElementById("final").textContent =
-    //    "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + percent + "%";
 }
 
 update();
