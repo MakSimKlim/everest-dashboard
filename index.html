@@ -503,7 +503,7 @@ h1 {
     bottom: 100px;
     transform: translateX(-50%);
 
-    font-size: calc(58px * var(--ui-scale));
+    font-size: 30px;
     font-weight: 800;
 
     line-height: 1.1;
@@ -514,6 +514,26 @@ h1 {
     font-family: 'Orbitron', sans-serif;
     text-align: center;
     white-space: pre-line;
+}
+
+.kpi-good {
+	color: #b7ff00;
+    text-shadow: 0 0 12px rgba(0,255,210,0.7);
+}
+
+.kpi-normal {
+    color: #00ffd5;
+    text-shadow: 0 0 12px rgba(183,255,0,0.7);
+}
+
+.kpi-warning {
+    color: #ff9a2b;
+    text-shadow: 0 0 12px rgba(255,154,43,0.7);
+}
+
+.kpi-danger {
+    color: #ff4d4d;
+    text-shadow: 0 0 12px rgba(255,77,77,0.7);
 }
 
 </style>
@@ -586,8 +606,6 @@ h1 {
 </div>
 
 <script>
-/* === ТВОЙ JS БЕЗ ИЗМЕНЕНИЙ (кроме добавления масштабирования в конце) === */
-/*formatTime loadStepsProgress*/
 /* === ДАТЫ === */
 
 const DATES = {
@@ -1084,8 +1102,39 @@ async function loadStepsProgress() {
     document.getElementById("final").textContent =
       "ИНДЕКС ДОСТИЖЕНИЯ\nЦЕЛИ: " + lastPercent + "%";
 	  
-	document.getElementById("kpi-status").textContent =
-    "СТАТУС прогресса: " + lastStatus;
+	const kpiEl = document.getElementById("kpi-status");
+
+	// фиксированный текст + динамический статус
+	kpiEl.innerHTML =
+	  "СТАТУС прогресса:<br><span id='kpi-value'>" + lastStatus + "</span>";
+
+	const kpiValue = document.getElementById("kpi-value");
+
+	// сброс классов
+	kpiValue.classList.remove(
+	  "kpi-good",
+	  "kpi-normal",
+	  "kpi-warning",
+	  "kpi-danger"
+	);
+
+	// цвет по статусу
+	if (lastStatus === "С опережением") {
+
+	  kpiValue.classList.add("kpi-good");
+
+	} else if (lastStatus === "В норме") {
+
+	  kpiValue.classList.add("kpi-normal");
+
+	} else if (lastStatus === "С отставанием") {
+
+	  kpiValue.classList.add("kpi-warning");
+
+	} else {
+
+	  kpiValue.classList.add("kpi-danger");
+	}
 
     // -----------------------------
     // CONDITIONS
